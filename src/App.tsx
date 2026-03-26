@@ -479,7 +479,6 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState<string | 'all'>('all');
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminId, setAdminId] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
   const [showAdminModal, setShowAdminModal] = useState(false);
   
   // Pattern Login State (Disabled)
@@ -573,11 +572,10 @@ export default function App() {
 
   // Admin ID check
   const handleAdminLogin = () => {
-    if (adminId === '652802' && adminPassword === 'admin') {
+    if (adminId === '652802') {
       setIsAdmin(true);
       setShowAdminModal(false);
       setAdminId('');
-      setAdminPassword('');
       setAlertModal({
         show: true,
         title: 'Başarılı',
@@ -587,7 +585,7 @@ export default function App() {
       setAlertModal({
         show: true,
         title: 'Hata',
-        message: 'Hatalı ID veya şifre girdiniz!'
+        message: 'Hatalı ID girdiniz!'
       });
     }
   };
@@ -2421,25 +2419,16 @@ export default function App() {
                   </div>
                   <div>
                     <h2 className="text-2xl font-bold">Yönetici Girişi</h2>
-                    <p className="text-neutral-500 text-sm mt-1">Lütfen erişim bilgilerinizi girin.</p>
+                    <p className="text-neutral-500 text-sm mt-1">Lütfen erişim kimliğinizi girin.</p>
                   </div>
-                  <div className="w-full space-y-3">
-                    <input 
-                      type="text" 
-                      placeholder="ID Giriniz" 
-                      className="w-full px-6 py-4 bg-neutral-100 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none text-center text-lg font-bold"
-                      value={adminId}
-                      onChange={(e) => setAdminId(e.target.value)}
-                    />
-                    <input 
-                      type="password" 
-                      placeholder="Şifre Giriniz" 
-                      className="w-full px-6 py-4 bg-neutral-100 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none text-center text-lg font-bold"
-                      value={adminPassword}
-                      onChange={(e) => setAdminPassword(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleAdminLogin()}
-                    />
-                  </div>
+                  <input 
+                    type="password" 
+                    placeholder="ID Giriniz" 
+                    className="w-full px-6 py-4 bg-neutral-100 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none text-center text-xl font-bold tracking-widest"
+                    value={adminId}
+                    onChange={(e) => setAdminId(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAdminLogin()}
+                  />
                   <button 
                     onClick={handleAdminLogin}
                     className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-colors"
