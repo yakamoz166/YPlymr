@@ -432,13 +432,15 @@ const TermCard = ({
 
       {/* Actions */}
       <div className="px-4 pb-4 flex justify-end gap-2">
-        <button 
-          onClick={() => onEdit(term)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-50 text-indigo-600 rounded-xl text-[10px] font-bold hover:bg-indigo-100 transition-colors"
-        >
-          <Edit2 size={12} />
-          Düzenle
-        </button>
+        {isAdmin && (
+          <button 
+            onClick={() => onEdit(term)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-50 text-indigo-600 rounded-xl text-[10px] font-bold hover:bg-indigo-100 transition-colors"
+          >
+            <Edit2 size={12} />
+            Düzenle
+          </button>
+        )}
         {isAdmin && (
           <button 
             onClick={() => onDelete(term)}
@@ -477,6 +479,7 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState<string | 'all'>('all');
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminId, setAdminId] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
   const [showAdminModal, setShowAdminModal] = useState(false);
   
   // Pattern Login State (Disabled)
@@ -570,10 +573,11 @@ export default function App() {
 
   // Admin ID check
   const handleAdminLogin = () => {
-    if (adminId === '652802') {
+    if (adminId === '652802' && adminPassword === 'admin') {
       setIsAdmin(true);
       setShowAdminModal(false);
       setAdminId('');
+      setAdminPassword('');
       setAlertModal({
         show: true,
         title: 'Başarılı',
@@ -583,7 +587,7 @@ export default function App() {
       setAlertModal({
         show: true,
         title: 'Hata',
-        message: 'Hatalı ID girdiniz!'
+        message: 'Hatalı ID veya şifre girdiniz!'
       });
     }
   };
@@ -1923,21 +1927,23 @@ export default function App() {
         </div>
 
         {/* Floating Action Button */}
-        <button 
-          onClick={() => { 
-            if (isTutorialView) {
-              setSelectedTutorial(null);
-              setTutorialForm({ title: '', steps: [] });
-              setShowTutorialModal(true);
-            } else {
-              resetTermForm(); 
-              setShowAddTermModal(true); 
-            }
-          }}
-          className="fixed bottom-8 right-8 w-16 h-16 bg-indigo-600 text-white rounded-2xl shadow-2xl shadow-indigo-400 flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-40"
-        >
-          <Plus size={32} />
-        </button>
+        {isAdmin && (
+          <button 
+            onClick={() => { 
+              if (isTutorialView) {
+                setSelectedTutorial(null);
+                setTutorialForm({ title: '', categoryId: '', steps: [] });
+                setShowTutorialModal(true);
+              } else {
+                resetTermForm(); 
+                setShowAddTermModal(true); 
+              }
+            }}
+            className="fixed bottom-8 right-8 w-16 h-16 bg-indigo-600 text-white rounded-2xl shadow-2xl shadow-indigo-400 flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-40"
+          >
+            <Plus size={32} />
+          </button>
+        )}
 
         {/* Logo Update Modal */}
         <AnimatePresence>
@@ -2415,16 +2421,25 @@ export default function App() {
                   </div>
                   <div>
                     <h2 className="text-2xl font-bold">Yönetici Girişi</h2>
-                    <p className="text-neutral-500 text-sm mt-1">Lütfen erişim kimliğinizi girin.</p>
+                    <p className="text-neutral-500 text-sm mt-1">Lütfen erişim bilgilerinizi girin.</p>
                   </div>
-                  <input 
-                    type="password" 
-                    placeholder="ID Giriniz" 
-                    className="w-full px-6 py-4 bg-neutral-100 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none text-center text-xl font-bold tracking-widest"
-                    value={adminId}
-                    onChange={(e) => setAdminId(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAdminLogin()}
-                  />
+                  <div className="w-full space-y-3">
+                    <input 
+                      type="text" 
+                      placeholder="ID Giriniz" 
+                      className="w-full px-6 py-4 bg-neutral-100 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none text-center text-lg font-bold"
+                      value={adminId}
+                      onChange={(e) => setAdminId(e.target.value)}
+                    />
+                    <input 
+                      type="password" 
+                      placeholder="Şifre Giriniz" 
+                      className="w-full px-6 py-4 bg-neutral-100 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none text-center text-lg font-bold"
+                      value={adminPassword}
+                      onChange={(e) => setAdminPassword(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAdminLogin()}
+                    />
+                  </div>
                   <button 
                     onClick={handleAdminLogin}
                     className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-colors"
