@@ -1,0 +1,7 @@
+{
+  "name": "Polimer İplik Otomasyon Paketleme",
+  "description": "Polimer iplik otomasyon paketleme makinesi bölümleri, parçaları ve terimleri için veritabanı yönetim sistemi.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

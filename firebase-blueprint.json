@@ -1,0 +1,124 @@
+{
+  "entities": {
+    "Settings": {
+      "title": "Ayarlar",
+      "description": "Uygulama genel ayarları",
+      "type": "object",
+      "properties": {
+        "loginPattern": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "points": {
+                "type": "array",
+                "items": { "type": "integer" }
+              },
+              "color": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "Category": {
+      "title": "Kategori",
+      "description": "Terimlerin gruplandırıldığı kategoriler",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Kategori adı"
+        }
+      },
+      "required": ["name"]
+    },
+    "Term": {
+      "title": "Terim",
+      "description": "Makine parçası veya teknik terim",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Terim adı"
+        },
+        "description": {
+          "type": "string",
+          "description": "Terim açıklaması"
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "Görsel URL'si (Base64 veya Storage)"
+        },
+        "categoryId": {
+          "type": "string",
+          "description": "Ait olduğu kategori ID'si (Opsiyonel)"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Oluşturulma tarihi"
+        }
+      },
+      "required": ["title", "description"]
+    },
+    "Tutorial": {
+      "title": "Nasıl Yapılır?",
+      "description": "Adım adım öğrenme paneli kartı",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Kartın başlığı"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "imageUrl": { "type": "string" },
+              "note": { "type": "string" },
+              "arrowPositions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "x": { "type": "number" },
+                    "y": { "type": "number" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "categoryId": {
+          "type": "string",
+          "description": "Ait olduğu kategori ID'si (Opsiyonel)"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["title", "steps"]
+    }
+  },
+  "firestore": {
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Kategoriler koleksiyonu"
+    },
+    "/terms/{termId}": {
+      "schema": "Term",
+      "description": "Terimler koleksiyonu"
+    },
+    "/tutorials/{tutorialId}": {
+      "schema": "Tutorial",
+      "description": "Nasıl yapılır kartları koleksiyonu"
+    },
+    "/settings/{settingId}": {
+      "schema": "Settings",
+      "description": "Uygulama ayarları (Giriş deseni vb.)"
+    }
+  }
+}

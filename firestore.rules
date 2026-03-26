@@ -1,0 +1,51 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: categories
+// Document ID: auto-generated
+// Fields:
+//   - name: string (required) - Kategori adı
+//
+// Collection: terms
+// Document ID: auto-generated
+// Fields:
+//   - title: string (required) - Terim adı
+//   - description: string (required) - Terim açıklaması
+//   - imageUrl: string (optional) - Görsel URL'si
+//   - categoryId: string (required) - Ait olduğu kategori ID'si
+//   - createdAt: timestamp (required) - Oluşturulma tarihi
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Informational content is publicly readable
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /terms/{termId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /tutorials/{tutorialId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}
