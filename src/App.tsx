@@ -124,6 +124,13 @@ interface Category {
   name: string;
 }
 
+interface ArrowAnnotation {
+  x: number;
+  y: number;
+  color: string;
+  rotation?: number;
+}
+
 interface Term {
   id: string;
   title: string;
@@ -131,6 +138,7 @@ interface Term {
   imageUrl?: string;
   categoryId: string;
   createdAt: Timestamp;
+  arrows?: ArrowAnnotation[];
 }
 
 interface TutorialStep {
@@ -138,7 +146,7 @@ interface TutorialStep {
   title: string;
   imageUrl: string;
   note: string;
-  arrowPositions: { x: number; y: number }[];
+  arrows?: ArrowAnnotation[];
 }
 
 interface Tutorial {
@@ -359,6 +367,97 @@ const PatternLock = ({ onComplete, color, size = 300, disabled = false, complete
   );
 };
 
+const ImageWithArrows = ({ 
+  src, 
+  alt, 
+  arrows = [], 
+  className,
+  selectedArrowIndex,
+  onArrowMouseDown,
+  onCanvasClick,
+  onCanvasMouseMove,
+  onCanvasMouseUp,
+  onCanvasMouseLeave,
+  onCanvasTouchMove,
+  onCanvasTouchEnd,
+  showArrows = true
+}: { 
+  src: string; 
+  alt: string; 
+  arrows?: ArrowAnnotation[]; 
+  className?: string;
+  selectedArrowIndex?: number | null;
+  onArrowMouseDown?: (index: number, e: React.MouseEvent | React.TouchEvent) => void;
+  onCanvasClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onCanvasMouseMove?: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onCanvasMouseUp?: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onCanvasMouseLeave?: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onCanvasTouchMove?: (e: React.TouchEvent<HTMLDivElement>) => void;
+  onCanvasTouchEnd?: (e: React.TouchEvent<HTMLDivElement>) => void;
+  showArrows?: boolean;
+}) => {
+  return (
+    <div 
+      className={cn("relative flex items-center justify-center overflow-hidden group/canvas bg-neutral-50/50", className)} 
+    >
+      <div 
+        className="relative inline-block max-w-full max-h-full shadow-sm"
+        onClick={onCanvasClick}
+        onMouseMove={onCanvasMouseMove}
+        onMouseUp={onCanvasMouseUp}
+        onMouseLeave={onCanvasMouseLeave}
+        onTouchMove={onCanvasTouchMove}
+        onTouchEnd={onCanvasTouchEnd}
+      >
+        <img 
+          src={src} 
+          alt={alt} 
+          className="block max-w-full max-h-full object-contain select-none" 
+          referrerPolicy="no-referrer"
+          crossOrigin="anonymous"
+          draggable={false}
+        />
+        {showArrows && arrows.map((arrow, i) => (
+          <div 
+            key={i}
+            className={cn(
+              "absolute z-10 transition-transform duration-200",
+              onArrowMouseDown ? "cursor-move pointer-events-auto" : "pointer-events-none",
+              selectedArrowIndex === i && "scale-125 drop-shadow-[0_0_8px_rgba(79,70,229,0.5)]"
+            )}
+            style={{ 
+              left: `${arrow.x}%`, 
+              top: `${arrow.y}%`,
+              transform: `translate(-50%, -90%) rotate(${arrow.rotation || 0}deg)`
+            }}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              onArrowMouseDown?.(i, e);
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              onArrowMouseDown?.(i, e);
+            }}
+          >
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" className="drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
+              <path 
+                d="M12 2L12 22M12 22L7 17M12 22L17 17" 
+                stroke={arrow.color} 
+                strokeWidth="3" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+              />
+            </svg>
+            {selectedArrowIndex === i && (
+              <div className="absolute -inset-2 border-2 border-indigo-500 rounded-full animate-pulse" />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 interface TermCardProps {
   key?: string | number;
   term: Term;
@@ -366,10 +465,21 @@ interface TermCardProps {
   isAdmin: boolean;
   onEdit: (term: Term) => void;
   onDelete: (term: Term) => void | Promise<void>;
-  onShowImage: (url: string) => void;
+  onShowImage: (url: string, arrows: ArrowAnnotation[]) => void;
   onShowDetails: (term: Term) => void;
+  onAnnotate: (term: Term) => void;
   logoUrl?: string;
 }
+
+const COLORS = [
+  { name: 'Kırmızı', value: '#ef4444' },
+  { name: 'Mavi', value: '#3b82f6' },
+  { name: 'Yeşil', value: '#22c55e' },
+  { name: 'Sarı', value: '#eab308' },
+  { name: 'Mor', value: '#a855f7' },
+  { name: 'Siyah', value: '#000000' },
+  { name: 'Beyaz', value: '#ffffff' },
+];
 
 const TermCard = ({ 
   term, 
@@ -379,6 +489,7 @@ const TermCard = ({
   onDelete,
   onShowImage,
   onShowDetails,
+  onAnnotate,
   logoUrl
 }: TermCardProps) => {
   return (
@@ -393,20 +504,32 @@ const TermCard = ({
         {/* Small Media Area */}
         <div className="w-20 h-20 flex-shrink-0 bg-neutral-100 rounded-2xl relative overflow-hidden flex flex-col items-center justify-center border border-neutral-100 gap-1">
           {term.imageUrl ? (
-            <button 
-              onClick={() => onShowImage(term.imageUrl!)}
-              className="w-full h-full group/img relative"
-            >
-              <img 
+            <div className="w-full h-full group/img relative">
+              <ImageWithArrows 
                 src={term.imageUrl} 
                 alt={term.title} 
-                className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-110"
-                referrerPolicy="no-referrer"
+                arrows={term.arrows}
+                className="w-full h-full"
+                showArrows={false}
               />
-              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
-                <Maximize2 size={12} className="text-white" />
+              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 z-20">
+                <button 
+                  onClick={() => onShowImage(term.imageUrl!, term.arrows || [])}
+                  className="p-1.5 bg-white/20 hover:bg-white/40 rounded-full transition-colors"
+                >
+                  <Maximize2 size={12} className="text-white" />
+                </button>
+                {isAdmin && (
+                  <button 
+                    onClick={() => onAnnotate(term)}
+                    className="p-1.5 bg-indigo-600 hover:bg-indigo-700 rounded-full transition-colors"
+                    title="Görseli İşaretle"
+                  >
+                    <MousePointer2 size={12} className="text-white" />
+                  </button>
+                )}
               </div>
-            </button>
+            </div>
           ) : (
             <div className="w-full h-full flex items-center justify-center p-2">
               <Logo className="w-full h-full shadow-none bg-transparent" src={logoUrl} />
@@ -464,6 +587,7 @@ const Logo = ({ className = "w-10 h-10", src }: { className?: string; src?: stri
         alt="Logo" 
         className="w-full h-full object-contain"
         referrerPolicy="no-referrer"
+        crossOrigin="anonymous"
         onError={(e) => {
           // Fallback if image fails to load
           e.currentTarget.src = "https://picsum.photos/seed/logo/200/200";
@@ -506,7 +630,7 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<{ url: string; arrows: ArrowAnnotation[] } | null>(null);
 
   // Tutorial State
   const [tutorials, setTutorials] = useState<Tutorial[]>([]);
@@ -549,6 +673,15 @@ export default function App() {
     message: ''
   });
 
+  const [annotatingItem, setAnnotatingItem] = useState<{
+    type: 'term' | 'step';
+    id: string;
+    imageUrl: string;
+    arrows: ArrowAnnotation[];
+  } | null>(null);
+  const [selectedArrowIndex, setSelectedArrowIndex] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
   // Form states
   const [editingTerm, setEditingTerm] = useState<Term | null>(null);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -565,6 +698,26 @@ export default function App() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showLogoUpdateModal, setShowLogoUpdateModal] = useState(false);
   const [showCameraModal, setShowCameraModal] = useState(false);
+
+  // Deep Linking Effect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const termId = params.get('term');
+    const tutorialId = params.get('tutorial');
+
+    if (termId && terms.length > 0) {
+      const term = terms.find(t => t.id === termId);
+      if (term) setActiveTerm(term);
+    }
+
+    if (tutorialId && tutorials.length > 0) {
+      const tutorial = tutorials.find(t => t.id === tutorialId);
+      if (tutorial) {
+        setIsTutorialView(true);
+        setActiveTutorial(tutorial);
+      }
+    }
+  }, [terms.length, tutorials.length]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -699,6 +852,12 @@ export default function App() {
     const unsubscribeTerms = onSnapshot(qTerms, (snapshot) => {
       const tms = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Term));
       setTerms(tms);
+      // Update active term if it's open
+      setActiveTerm(prev => {
+        if (!prev) return null;
+        const updated = tms.find(t => t.id === prev.id);
+        return updated || null;
+      });
       setLoading(false);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'terms');
@@ -881,7 +1040,7 @@ export default function App() {
               title: '',
               imageUrl,
               note: '',
-              arrowPositions: [{ x: 50, y: 50 }]
+              arrows: [{ x: 50, y: 50, color: '#ef4444' }]
             };
             setTutorialForm(prev => ({
               ...prev,
@@ -1194,6 +1353,42 @@ export default function App() {
     });
   };
 
+  const saveAnnotations = async () => {
+    if (!annotatingItem) return;
+
+    try {
+      if (annotatingItem.type === 'term') {
+        const termRef = doc(db, 'terms', annotatingItem.id);
+        await updateDoc(termRef, {
+          arrows: annotatingItem.arrows
+        });
+        setTerms(prev => prev.map(t => t.id === annotatingItem.id ? { ...t, arrows: annotatingItem.arrows } : t));
+        if (activeTerm?.id === annotatingItem.id) {
+          setActiveTerm(prev => prev ? { ...prev, arrows: annotatingItem.arrows } : null);
+        }
+      } else {
+        const tutorial = tutorials.find(t => t.steps.some(s => s.id === annotatingItem.id));
+        if (tutorial) {
+          const tutorialRef = doc(db, 'tutorials', tutorial.id);
+          const updatedSteps = tutorial.steps.map(s => 
+            s.id === annotatingItem.id ? { ...s, arrows: annotatingItem.arrows } : s
+          );
+          await updateDoc(tutorialRef, {
+            steps: updatedSteps
+          });
+          setTutorials(prev => prev.map(t => t.id === tutorial.id ? { ...t, steps: updatedSteps } : t));
+          if (activeTutorial?.id === tutorial.id) {
+            setActiveTutorial(prev => prev ? { ...prev, steps: updatedSteps } : null);
+          }
+        }
+      }
+      setAnnotatingItem(null);
+      setSelectedArrowIndex(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `${annotatingItem.type}s/${annotatingItem.id}`);
+    }
+  };
+
   const addTutorialStep = async (file: File) => {
     setIsUploading(true);
     try {
@@ -1203,7 +1398,7 @@ export default function App() {
         title: '',
         imageUrl,
         note: '',
-        arrowPositions: [{ x: 50, y: 50 }]
+        arrows: [{ x: 50, y: 50, color: '#ef4444' }]
       };
       setTutorialForm(prev => ({
         ...prev,
@@ -1230,25 +1425,25 @@ export default function App() {
     }));
   };
 
-  const updateStepArrow = (stepId: string, x: number, y: number) => {
+  const updateStepArrow = (stepId: string, x: number, y: number, color: string = '#ef4444') => {
     setTutorialForm(prev => ({
       ...prev,
       steps: prev.steps.map(s => {
         if (s.id === stepId) {
-          // Toggle arrow: if an arrow is very close to the click, remove it. Otherwise add it.
-          const existingIndex = s.arrowPositions.findIndex(p => 
+          const arrows = s.arrows || [];
+          const existingIndex = arrows.findIndex(p => 
             Math.abs(p.x - x) < 5 && Math.abs(p.y - y) < 5
           );
           
           if (existingIndex !== -1) {
             return {
               ...s,
-              arrowPositions: s.arrowPositions.filter((_, i) => i !== existingIndex)
+              arrows: arrows.filter((_, i) => i !== existingIndex)
             };
           } else {
             return {
               ...s,
-              arrowPositions: [...s.arrowPositions, { x, y }]
+              arrows: [...arrows, { x, y, color }]
             };
           }
         }
@@ -1337,7 +1532,7 @@ export default function App() {
               >
                 <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
                   <h2 className="font-bold text-lg">Menü</h2>
-                  <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-neutral-400">
+                  <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-neutral-400 cursor-pointer">
                     <X size={20} />
                   </button>
                 </div>
@@ -1607,11 +1802,22 @@ export default function App() {
                   </div>
 
                   {activeTutorial ? (
-                    <div className="bg-[#fdfcf8] rounded-[60px] p-8 sm:p-16 shadow-2xl border border-neutral-100 relative overflow-hidden">
+                    <div 
+                      className="bg-[#fdfcf8] rounded-[60px] p-8 sm:p-16 shadow-2xl border border-neutral-100 relative overflow-hidden"
+                    >
                       {/* Background Decorative Elements */}
                       <div className="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none">
                         <div className="absolute top-10 right-10 w-64 h-64 bg-emerald-500 rounded-full blur-3xl" />
                         <div className="absolute bottom-10 left-10 w-64 h-64 bg-indigo-500 rounded-full blur-3xl" />
+                      </div>
+
+                      <div className="absolute top-0 right-0 p-8 z-50">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setActiveTutorial(null); }}
+                          className="p-3 bg-white text-neutral-400 rounded-2xl shadow-sm hover:text-red-500 transition-colors cursor-pointer relative z-[60]"
+                        >
+                          <X size={24} />
+                        </button>
                       </div>
 
                       <div className="relative z-10 flex flex-col items-center mb-16">
@@ -1620,31 +1826,25 @@ export default function App() {
                             {activeTutorial.title}
                           </h3>
                         </div>
-                        <div className="absolute top-0 right-0 flex gap-2">
+                        <div className="flex gap-2">
                           {isAdmin && (
                             <>
                               <button 
                                 onClick={() => startEditingTutorial(activeTutorial)}
-                                className="p-3 bg-white text-indigo-600 rounded-2xl shadow-sm hover:bg-indigo-50 transition-colors"
+                                className="p-3 bg-white text-indigo-600 rounded-2xl shadow-sm hover:bg-indigo-50 transition-colors cursor-pointer"
                                 title="Düzenle"
                               >
                                 <Edit2 size={24} />
                               </button>
                               <button 
                                 onClick={() => handleDeleteTutorial(activeTutorial.id)}
-                                className="p-3 bg-white text-red-600 rounded-2xl shadow-sm hover:bg-red-50 transition-colors"
+                                className="p-3 bg-white text-red-600 rounded-2xl shadow-sm hover:bg-red-50 transition-colors cursor-pointer"
                                 title="Sil"
                               >
                                 <Trash2 size={24} />
                               </button>
                             </>
                           )}
-                          <button 
-                            onClick={() => setActiveTutorial(null)}
-                            className="p-3 bg-white text-neutral-400 rounded-2xl shadow-sm hover:text-red-500 transition-colors"
-                          >
-                            <X size={24} />
-                          </button>
                         </div>
                       </div>
                       
@@ -1688,15 +1888,28 @@ export default function App() {
                                 {/* Image Container */}
                                 <div className="relative shrink-0 z-20">
                                   <div 
-                                    className="w-64 h-64 sm:w-80 sm:h-80 rounded-[50px] overflow-hidden border-8 border-white shadow-2xl cursor-pointer hover:scale-105 transition-transform relative"
-                                    onClick={() => setSelectedImage(step.imageUrl)}
+                                    className="w-64 h-64 sm:w-80 sm:h-80 rounded-[50px] overflow-hidden border-8 border-white shadow-2xl cursor-pointer hover:scale-105 transition-transform relative group/img"
+                                    onClick={() => setSelectedImage({ url: step.imageUrl, arrows: step.arrows || [] })}
                                   >
-                                    <img 
-                                      src={step.imageUrl} 
-                                      alt={step.title} 
-                                      className="w-full h-full object-cover"
-                                      referrerPolicy="no-referrer"
-                                    />
+                                     <ImageWithArrows 
+                                       src={step.imageUrl} 
+                                       alt={step.title} 
+                                       arrows={step.arrows}
+                                       className="w-full h-full"
+                                       onCanvasClick={() => setSelectedImage({ url: step.imageUrl, arrows: step.arrows || [] })}
+                                       showArrows={false}
+                                     />
+                                     {isAdmin && (
+                                       <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center z-20">
+                                         <button 
+                                           onClick={(e) => { e.stopPropagation(); setAnnotatingItem({ type: 'step', id: step.id, imageUrl: step.imageUrl, arrows: step.arrows || [] }); }}
+                                           className="p-4 bg-indigo-600 text-white rounded-full shadow-xl hover:bg-indigo-700 transition-all transform hover:scale-110"
+                                           title="Görseli İşaretle"
+                                         >
+                                           <MousePointer2 size={24} />
+                                         </button>
+                                       </div>
+                                     )}
                                   </div>
                                 </div>
 
@@ -1736,6 +1949,7 @@ export default function App() {
                       {filteredTutorials.map(tut => (
                         <button
                           key={tut.id}
+                          id={`tutorial-card-${tut.id}`}
                           onClick={() => setActiveTutorial(tut)}
                           className="group bg-white p-6 rounded-[40px] border border-neutral-200 shadow-sm hover:shadow-xl hover:border-indigo-200 transition-all text-left flex flex-col h-full"
                         >
@@ -1745,8 +1959,14 @@ export default function App() {
                             </div>
                             <div className="flex -space-x-3 overflow-hidden">
                               {tut.steps.slice(0, 3).map((step, i) => (
-                                <div key={step.id} className="w-10 h-10 rounded-full border-2 border-white overflow-hidden bg-neutral-100">
-                                  <img src={step.imageUrl} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                <div key={step.id} className="w-10 h-10 rounded-full border-2 border-white overflow-hidden bg-neutral-100 relative">
+                                  <ImageWithArrows 
+                                    src={step.imageUrl} 
+                                    alt={step.title} 
+                                    arrows={step.arrows}
+                                    className="w-full h-full"
+                                    showArrows={false}
+                                  />
                                 </div>
                               ))}
                               {tut.steps.length > 3 && (
@@ -1806,11 +2026,13 @@ export default function App() {
               ) : (
                 <div className="space-y-8">
                   {activeTerm ? (
-                    <div className="bg-white rounded-[60px] p-8 sm:p-16 shadow-2xl border border-neutral-100 relative overflow-hidden">
-                      <div className="absolute top-0 right-0 p-8 z-10">
+                    <div 
+                      className="bg-white rounded-[60px] p-8 sm:p-16 shadow-2xl border border-neutral-100 relative overflow-hidden"
+                    >
+                      <div className="absolute top-0 right-0 p-8 z-50">
                         <button 
-                          onClick={() => setActiveTerm(null)}
-                          className="p-3 bg-neutral-100 text-neutral-500 rounded-2xl hover:bg-neutral-200 transition-colors"
+                          onClick={(e) => { e.stopPropagation(); setActiveTerm(null); }}
+                          className="p-3 bg-neutral-100 text-neutral-500 rounded-2xl hover:bg-neutral-200 transition-colors cursor-pointer relative z-[60]"
                         >
                           <X size={24} />
                         </button>
@@ -1818,14 +2040,29 @@ export default function App() {
 
                       <div className="flex flex-col lg:flex-row gap-12 items-center lg:items-start">
                         {/* Term Image */}
-                        <div className="w-full lg:w-1/2 aspect-square rounded-[40px] overflow-hidden bg-neutral-50 border border-neutral-100 shadow-inner">
+                        <div className="w-full lg:w-1/2 aspect-square rounded-[40px] overflow-hidden bg-neutral-50 border border-neutral-100 shadow-inner relative group/img">
                           {activeTerm.imageUrl ? (
-                            <img 
-                              src={activeTerm.imageUrl} 
-                              alt={activeTerm.title} 
-                              className="w-full h-full object-cover"
-                              referrerPolicy="no-referrer"
-                            />
+                            <>
+                              <ImageWithArrows 
+                                src={activeTerm.imageUrl} 
+                                alt={activeTerm.title} 
+                                arrows={activeTerm.arrows}
+                                className="w-full h-full cursor-pointer"
+                                onCanvasClick={() => setSelectedImage({ url: activeTerm.imageUrl!, arrows: activeTerm.arrows || [] })}
+                                showArrows={false}
+                              />
+                              {isAdmin && (
+                                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center z-20">
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); setAnnotatingItem({ type: 'term', id: activeTerm.id, imageUrl: activeTerm.imageUrl!, arrows: activeTerm.arrows || [] }); }}
+                                    className="p-4 bg-indigo-600 text-white rounded-full shadow-xl hover:bg-indigo-700 transition-all transform hover:scale-110"
+                                    title="Görseli İşaretle"
+                                  >
+                                    <MousePointer2 size={24} />
+                                  </button>
+                                </div>
+                              )}
+                            </>
                           ) : (
                             <div className="w-full h-full flex items-center justify-center p-12">
                               <Logo className="w-full h-full opacity-20" src={appSettings?.logoUrl} />
@@ -1850,24 +2087,26 @@ export default function App() {
                             </p>
                           </div>
 
-                          {isAdmin && (
-                            <div className="flex gap-4 pt-8 border-t border-neutral-100">
-                              <button 
-                                onClick={() => startEditing(activeTerm)}
-                                className="flex items-center gap-2 px-6 py-3 bg-indigo-50 text-indigo-600 rounded-2xl font-bold hover:bg-indigo-100 transition-colors"
-                              >
-                                <Edit2 size={20} />
-                                Düzenle
-                              </button>
-                              <button 
-                                onClick={() => handleDeleteTerm(activeTerm)}
-                                className="flex items-center gap-2 px-6 py-3 bg-red-50 text-red-600 rounded-2xl font-bold hover:bg-red-100 transition-colors"
-                              >
-                                <Trash2 size={20} />
-                                Sil
-                              </button>
-                            </div>
-                          )}
+                          <div className="flex gap-4 pt-8 border-t border-neutral-100">
+                            {isAdmin && (
+                              <>
+                                <button 
+                                  onClick={() => startEditing(activeTerm)}
+                                  className="flex items-center gap-2 px-6 py-3 bg-indigo-50 text-indigo-600 rounded-2xl font-bold hover:bg-indigo-100 transition-colors"
+                                >
+                                  <Edit2 size={20} />
+                                  Düzenle
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteTerm(activeTerm)}
+                                  className="flex items-center gap-2 px-6 py-3 bg-red-50 text-red-600 rounded-2xl font-bold hover:bg-red-100 transition-colors"
+                                >
+                                  <Trash2 size={20} />
+                                  Sil
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1898,8 +2137,9 @@ export default function App() {
                                 isAdmin={isAdmin}
                                 onEdit={startEditing}
                                 onDelete={handleDeleteTerm}
-                                onShowImage={setSelectedImage}
+                                onShowImage={(url, arrows) => setSelectedImage({ url, arrows: arrows || [] })}
                                 onShowDetails={setActiveTerm}
+                                onAnnotate={(term) => setAnnotatingItem({ type: 'term', id: term.id, imageUrl: term.imageUrl!, arrows: term.arrows || [] })}
                                 logoUrl={appSettings?.logoUrl}
                               />
                             ))}
@@ -1965,7 +2205,10 @@ export default function App() {
                     <h2 className="text-2xl font-bold text-neutral-900">Logo Güncelle</h2>
                     <p className="text-neutral-500 text-sm font-medium mt-1">Uygulama logosunu değiştirin</p>
                   </div>
-                  <button onClick={() => setShowLogoUpdateModal(false)} className="p-3 bg-neutral-100 text-neutral-500 rounded-2xl hover:bg-neutral-200 transition-colors">
+                  <button 
+                    onClick={() => setShowLogoUpdateModal(false)} 
+                    className="p-3 bg-neutral-100 text-neutral-500 rounded-2xl hover:bg-neutral-200 transition-colors cursor-pointer"
+                  >
                     <X size={20} />
                   </button>
                 </div>
@@ -2005,7 +2248,266 @@ export default function App() {
 
         {/* Modals */}
         <AnimatePresence>
-          {/* Camera Modal */}
+          {/* Image Annotator Modal */}
+          {annotatingItem && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-8">
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => {
+                  setAnnotatingItem(null);
+                  setSelectedArrowIndex(null);
+                }}
+                className="absolute inset-0 bg-neutral-900/90 backdrop-blur-md"
+              />
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="relative bg-white w-full max-w-5xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+              >
+                {/* Header */}
+                <div className="p-6 border-b border-neutral-100 flex items-center justify-between bg-white z-10">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
+                      <MousePointer2 size={24} />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-neutral-900">Görseli İşaretle</h2>
+                      <p className="text-xs text-neutral-500 font-medium uppercase tracking-wider">Ok eklemek için görsele tıklayın</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      setAnnotatingItem(null);
+                      setSelectedArrowIndex(null);
+                    }}
+                    className="p-3 bg-neutral-100 text-neutral-500 rounded-2xl hover:bg-neutral-200 transition-colors cursor-pointer"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
+                  {/* Canvas Area */}
+                  <div className="flex-1 bg-neutral-100 p-4 sm:p-8 flex items-center justify-center overflow-auto">
+                    <div className="relative shadow-2xl rounded-2xl overflow-hidden bg-white group/annotator">
+                      <ImageWithArrows 
+                        src={annotatingItem.imageUrl} 
+                        alt="Annotating" 
+                        arrows={annotatingItem.arrows}
+                        className="max-w-full max-h-[60vh] object-contain cursor-crosshair touch-none"
+                        selectedArrowIndex={selectedArrowIndex}
+                        onArrowMouseDown={(index) => {
+                          setSelectedArrowIndex(index);
+                          setIsDragging(true);
+                        }}
+                        onCanvasClick={(e) => {
+                          if (isDragging) return;
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const x = ((e.clientX - rect.left) / rect.width) * 100;
+                          const y = ((e.clientY - rect.top) / rect.height) * 100;
+                          
+                          // Get current selected color from state or default
+                          const activeColor = (window as any).activeAnnotatorColor || '#ef4444';
+                          
+                          setAnnotatingItem(prev => {
+                            if (!prev) return null;
+                            const arrows = prev.arrows || [];
+                            
+                            // Check if clicking near an existing arrow to select it
+                            const existingIndex = arrows.findIndex(p => 
+                              Math.abs(p.x - x) < 4 && Math.abs(p.y - y) < 4
+                            );
+                            
+                            if (existingIndex !== -1) {
+                              setSelectedArrowIndex(existingIndex);
+                              return prev;
+                            } else {
+                              // Add new arrow and select it
+                              const newArrow = { x, y, color: activeColor, rotation: 0 };
+                              setSelectedArrowIndex(arrows.length);
+                              return {
+                                ...prev,
+                                arrows: [...arrows, newArrow]
+                              };
+                            }
+                          });
+                        }}
+                        onCanvasMouseMove={(e) => {
+                          if (!isDragging || selectedArrowIndex === null) return;
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+                          const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+                          setAnnotatingItem(prev => {
+                            if (!prev) return null;
+                            const arrows = [...prev.arrows];
+                            arrows[selectedArrowIndex] = { ...arrows[selectedArrowIndex], x, y };
+                            return { ...prev, arrows };
+                          });
+                        }}
+                        onCanvasMouseUp={() => setIsDragging(false)}
+                        onCanvasMouseLeave={() => setIsDragging(false)}
+                        onCanvasTouchMove={(e) => {
+                          if (!isDragging || selectedArrowIndex === null) return;
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const touch = e.touches[0];
+                          const x = Math.max(0, Math.min(100, ((touch.clientX - rect.left) / rect.width) * 100));
+                          const y = Math.max(0, Math.min(100, ((touch.clientY - rect.top) / rect.height) * 100));
+                          setAnnotatingItem(prev => {
+                            if (!prev) return null;
+                            const arrows = [...prev.arrows];
+                            arrows[selectedArrowIndex] = { ...arrows[selectedArrowIndex], x, y };
+                            return { ...prev, arrows };
+                          });
+                        }}
+                        onCanvasTouchEnd={() => setIsDragging(false)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Sidebar Controls */}
+                  <div className="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-neutral-100 p-6 flex flex-col gap-8 bg-white overflow-y-auto">
+                    {/* Color Picker */}
+                    <div className="space-y-4">
+                      <label className="text-xs font-bold text-neutral-400 uppercase tracking-widest flex items-center gap-2">
+                        <Palette size={14} />
+                        Ok Rengi Seçin
+                      </label>
+                      <div className="grid grid-cols-4 gap-3">
+                        {COLORS.map((color) => (
+                          <button
+                            key={color.value}
+                            onClick={() => {
+                              (window as any).activeAnnotatorColor = color.value;
+                              
+                              // If an arrow is selected, update its color
+                              if (selectedArrowIndex !== null) {
+                                setAnnotatingItem(prev => {
+                                  if (!prev) return null;
+                                  const arrows = [...(prev.arrows || [])];
+                                  arrows[selectedArrowIndex] = { ...arrows[selectedArrowIndex], color: color.value };
+                                  return { ...prev, arrows };
+                                });
+                              }
+
+                              const btn = document.getElementById(`color-${color.value.replace('#', '')}`);
+                              document.querySelectorAll('.color-btn').forEach(el => el.classList.remove('ring-4', 'ring-indigo-100', 'border-indigo-600'));
+                              btn?.classList.add('ring-4', 'ring-indigo-100', 'border-indigo-600');
+                            }}
+                            id={`color-${color.value.replace('#', '')}`}
+                            className={cn(
+                              "color-btn w-full aspect-square rounded-xl border-2 border-transparent transition-all transform hover:scale-110",
+                              (window as any).activeAnnotatorColor === color.value ? "ring-4 ring-indigo-100 border-indigo-600" : "border-neutral-200"
+                            )}
+                            style={{ backgroundColor: color.value }}
+                            title={color.name}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Rotation Control */}
+                    {selectedArrowIndex !== null && (
+                      <div className="space-y-4 p-5 bg-neutral-50 rounded-[32px] border border-neutral-100">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-bold text-neutral-400 uppercase tracking-widest flex items-center gap-2">
+                            <RotateCcw size={14} />
+                            Yön Ayarla
+                          </label>
+                          <span className="text-xs font-bold text-indigo-600">
+                            {annotatingItem.arrows[selectedArrowIndex].rotation || 0}°
+                          </span>
+                        </div>
+                        <input 
+                          type="range"
+                          min="0"
+                          max="360"
+                          value={annotatingItem.arrows[selectedArrowIndex].rotation || 0}
+                          onChange={(e) => {
+                            const rotation = parseInt(e.target.value);
+                            setAnnotatingItem(prev => {
+                              if (!prev) return null;
+                              const arrows = [...(prev.arrows || [])];
+                              arrows[selectedArrowIndex] = { ...arrows[selectedArrowIndex], rotation };
+                              return { ...prev, arrows };
+                            });
+                          }}
+                          className="w-full h-2 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                        />
+                        <button 
+                          onClick={() => {
+                            setAnnotatingItem(prev => {
+                              if (!prev) return null;
+                              const arrows = (prev.arrows || []).filter((_, i) => i !== selectedArrowIndex);
+                              setSelectedArrowIndex(null);
+                              return { ...prev, arrows };
+                            });
+                          }}
+                          className="w-full py-2 text-xs font-bold text-red-500 hover:bg-red-50 rounded-xl transition-colors flex items-center justify-center gap-2"
+                        >
+                          <Trash2 size={14} />
+                          Seçili Oku Sil
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Instructions */}
+                    <div className="bg-indigo-50 p-4 rounded-2xl space-y-2">
+                      <p className="text-xs font-bold text-indigo-600 uppercase tracking-wider">Nasıl Kullanılır?</p>
+                      <ul className="text-[11px] text-indigo-900/70 space-y-1.5 font-medium">
+                        <li className="flex gap-2">
+                          <span className="w-4 h-4 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] shrink-0">1</span>
+                          Bir renk seçin.
+                        </li>
+                        <li className="flex gap-2">
+                          <span className="w-4 h-4 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] shrink-0">2</span>
+                          Görsel üzerinde işaretlemek istediğiniz yere tıklayın.
+                        </li>
+                        <li className="flex gap-2">
+                          <span className="w-4 h-4 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] shrink-0">3</span>
+                          Okları basılı tutarak sürükleyip taşıyabilirsiniz.
+                        </li>
+                        <li className="flex gap-2">
+                          <span className="w-4 h-4 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] shrink-0">4</span>
+                          Seçili okun yönünü ve rengini ayarlayın.
+                        </li>
+                        <li className="flex gap-2">
+                          <span className="w-4 h-4 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] shrink-0">5</span>
+                          Kaldırmak için oku seçip "Sil" butonuna basın.
+                        </li>
+                      </ul>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="mt-auto flex flex-col gap-3">
+                      <button 
+                        onClick={saveAnnotations}
+                        className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2"
+                      >
+                        <Check size={20} />
+                        Değişiklikleri Kaydet
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setAnnotatingItem(null);
+                          setSelectedArrowIndex(null);
+                        }}
+                        className="w-full py-4 bg-neutral-100 text-neutral-600 rounded-2xl font-bold hover:bg-neutral-200 transition-all"
+                      >
+                        İptal
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Camera Modal */}
           {showCameraModal && (
             <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
               <motion.div 
@@ -2031,7 +2533,7 @@ export default function App() {
                 <div className="absolute bottom-8 left-0 right-0 flex items-center justify-center gap-8">
                   <button 
                     onClick={stopCamera}
-                    className="w-14 h-14 bg-white/20 backdrop-blur-md text-white rounded-full flex items-center justify-center hover:bg-white/30 transition-colors"
+                    className="w-14 h-14 bg-white/20 backdrop-blur-md text-white rounded-full flex items-center justify-center hover:bg-white/30 transition-colors cursor-pointer"
                   >
                     <X size={24} />
                   </button>
@@ -2066,6 +2568,15 @@ export default function App() {
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
                 className="relative bg-white w-full max-w-md rounded-[48px] p-8 shadow-2xl flex flex-col items-center gap-8"
               >
+                <div className="absolute top-8 right-8">
+                  <button 
+                    onClick={() => setShowPatternSetup(false)} 
+                    className="p-3 bg-neutral-100 text-neutral-500 rounded-2xl hover:bg-neutral-200 transition-colors cursor-pointer"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
+
                 <div className="flex flex-col items-center text-center gap-2">
                   <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center mb-2">
                     <Palette size={32} />
@@ -2166,7 +2677,7 @@ export default function App() {
                 >
                   <div className="absolute -top-14 right-0 flex gap-2">
                     <a 
-                      href={selectedImage} 
+                      href={selectedImage.url} 
                       download="image.png"
                       target="_blank"
                       rel="noopener noreferrer"
@@ -2177,17 +2688,17 @@ export default function App() {
                     </a>
                     <button 
                       onClick={() => setSelectedImage(null)}
-                      className="w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-colors backdrop-blur-sm"
+                      className="w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-colors backdrop-blur-sm cursor-pointer"
                       title="Kapat"
                     >
                       <X size={24} />
                     </button>
                   </div>
-                  <img 
-                    src={selectedImage} 
+                  <ImageWithArrows 
+                    src={selectedImage.url} 
                     alt="Full view" 
+                    arrows={selectedImage.arrows}
                     className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
-                    referrerPolicy="no-referrer"
                   />
                 </motion.div>
               </div>
@@ -2217,7 +2728,10 @@ export default function App() {
                     </h2>
                     <p className="text-neutral-500 text-sm font-medium mt-1">İnfografik ve öğrenme adımları oluşturun</p>
                   </div>
-                  <button onClick={() => setShowTutorialModal(false)} className="p-3 bg-neutral-100 text-neutral-500 rounded-2xl hover:bg-neutral-200 transition-colors">
+                  <button 
+                    onClick={() => setShowTutorialModal(false)} 
+                    className="p-3 bg-neutral-100 text-neutral-500 rounded-2xl hover:bg-neutral-200 transition-colors cursor-pointer relative z-20"
+                  >
                     <X size={24} />
                   </button>
                 </div>
@@ -2315,16 +2829,18 @@ export default function App() {
                                 {index + 1}. Adım Görseli (Ok konumunu seçmek için tıklayın)
                               </label>
                               <div className="relative">
-                                <div 
-                                  className="relative aspect-video rounded-2xl overflow-hidden bg-white border border-neutral-200 shadow-inner"
-                                >
-                                  <img 
-                                    src={step.imageUrl} 
-                                    alt="Step" 
-                                    className="w-full h-full object-cover"
-                                    referrerPolicy="no-referrer"
-                                  />
-                                </div>
+                                <ImageWithArrows 
+                                  src={step.imageUrl} 
+                                  alt="Step" 
+                                  arrows={step.arrows}
+                                  className="aspect-video rounded-2xl overflow-hidden bg-white border border-neutral-200 shadow-inner cursor-crosshair"
+                                  onCanvasClick={(e) => {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    const x = ((e.clientX - rect.left) / rect.width) * 100;
+                                    const y = ((e.clientY - rect.top) / rect.height) * 100;
+                                    updateStepArrow(step.id, x, y);
+                                  }}
+                                />
                               </div>
                             </div>
 
@@ -2459,7 +2975,12 @@ export default function App() {
                 <div className="flex flex-col gap-6">
                   <div className="flex items-center justify-between">
                     <h2 className="text-xl font-bold">Yeni Kategori</h2>
-                    <button onClick={() => setShowAddCategoryModal(false)} className="text-neutral-400"><X /></button>
+                    <button 
+                      onClick={() => setShowAddCategoryModal(false)} 
+                      className="p-2 bg-neutral-100 text-neutral-500 rounded-xl hover:bg-neutral-200 transition-colors cursor-pointer"
+                    >
+                      <X size={20} />
+                    </button>
                   </div>
                   <input 
                     type="text" 
@@ -2498,7 +3019,12 @@ export default function App() {
                 <div className="flex flex-col gap-6">
                   <div className="flex items-center justify-between">
                     <h2 className="text-xl font-bold">Kategoriyi Düzenle</h2>
-                    <button onClick={() => setShowEditCategoryModal(false)} className="text-neutral-400"><X /></button>
+                    <button 
+                      onClick={() => setShowEditCategoryModal(false)} 
+                      className="p-2 bg-neutral-100 text-neutral-500 rounded-xl hover:bg-neutral-200 transition-colors cursor-pointer"
+                    >
+                      <X size={20} />
+                    </button>
                   </div>
                   <input 
                     type="text" 
@@ -2574,7 +3100,12 @@ export default function App() {
                 className="relative bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl text-center"
               >
                 <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <X size={32} />
+                  <button 
+                    onClick={() => setAlertModal(prev => ({ ...prev, show: false }))}
+                    className="w-full h-full flex items-center justify-center cursor-pointer"
+                  >
+                    <X size={32} />
+                  </button>
                 </div>
                 <h2 className="text-xl font-bold mb-2">{alertModal.title}</h2>
                 <p className="text-neutral-500 text-sm mb-6">{alertModal.message}</p>
@@ -2608,7 +3139,12 @@ export default function App() {
               <div className="flex flex-col gap-6">
                 <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-bold">{editingTerm ? 'Terimi Düzenle' : 'Yeni Terim Ekle'}</h2>
-                  <button onClick={() => !isUploading && setShowAddTermModal(false)} className="text-neutral-400"><X /></button>
+                  <button 
+                    onClick={() => !isUploading && setShowAddTermModal(false)} 
+                    className="p-3 bg-neutral-100 text-neutral-500 rounded-2xl hover:bg-neutral-200 transition-colors cursor-pointer"
+                  >
+                    <X size={24} />
+                  </button>
                 </div>
 
                 {/* Media Upload Area */}
@@ -2631,7 +3167,7 @@ export default function App() {
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
                           <button
                             type="button"
-                            onClick={(e) => { e.stopPropagation(); setSelectedImage(newTerm.imagePreview); }}
+                            onClick={(e) => { e.stopPropagation(); setSelectedImage({ url: newTerm.imagePreview, arrows: [] }); }}
                             className="w-10 h-10 bg-white/20 hover:bg-white/30 text-white rounded-full flex items-center justify-center backdrop-blur-sm transition-colors"
                             title="Büyüt"
                           >
@@ -2656,7 +3192,7 @@ export default function App() {
                           <button 
                             type="button"
                             onClick={(e) => { e.stopPropagation(); setNewTerm(prev => ({ ...prev, image: null, imagePreview: '' })); }}
-                            className="absolute top-2 right-2 w-8 h-8 bg-black/60 text-white rounded-full flex items-center justify-center hover:bg-black/80 transition-colors z-10"
+                            className="absolute top-2 right-2 w-8 h-8 bg-black/60 text-white rounded-full flex items-center justify-center hover:bg-black/80 transition-colors z-10 cursor-pointer"
                           >
                             <X size={16} />
                           </button>
@@ -2743,7 +3279,6 @@ export default function App() {
             </motion.div>
           </div>
         )}
-      </AnimatePresence>
 
       {/* Custom Scrollbar CSS */}
       <style>{`
